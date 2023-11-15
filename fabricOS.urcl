@@ -1,0 +1,207 @@
+// Header
+BITS >= 16
+MINREG 8
+MINHEAP 4096
+MINSTACK 16
+
+CAL .func_init
+CAL .func_shell
+
+// Variables
+.var_exit
+DW 0
+// 0 planned exit
+// 1 unexpected error
+// 2 unplanned exit
+.var_error
+DW 0
+// 0 default
+// 1 invalid or unimplemented instruction
+.var_cwd
+DW 0
+.var_string
+DW 0
+
+// Virtual Registers
+.vr
+DW 0 //r0 - Always reads 0
+DW 0 //r1
+DW 0 //r2
+DW 0 //r3
+DW 0 //r4
+DW 0 //r5
+DW 0 //r6
+DW 0 //r7
+DW 0 //r8
+DW 0 //r9
+DW 0 //rA
+DW 0 //rB
+DW 0 //rC
+DW 0 //rD
+DW 0 //rE
+.vr_stack
+DW 0 //rF
+
+// Instructions
+.instr_f
+DW .instr_nop //0x00
+DW .instr_sys//.instr_sys //0x01
+DW .instr_imm//.instr_imm //0x02
+DW .instr_err//.instr_add //0x03
+DW .instr_err//.instr_and // 0x04
+DW .instr_err//.instr_nor // 0x05
+DW .instr_err//.instr_shl// 0x06
+DW .instr_err//.instr_shr // 0x07
+DW .instr_err//.instr_brg // 0x08
+DW .instr_err//.instr_bre // 0x09
+DW .instr_err//.instr_psh // 0x0A
+DW .instr_err//.instr_pop // 0x0B
+DW .instr_err//.instr_lod // 0x0C
+DW .instr_err//.instr_str// 0x0D
+DW .instr_err//.instr_brc // 0x0E
+DW .instr_err//.instr_blk // 0x0F
+DW .instr_hlt // 0x10
+.instr
+BRE .instr_nop R5 0x00
+BRE .instr_sys R5 0x01
+BRE .instr_imm R5 0x02
+BRE .instr_add R5 0x03
+BRE .instr_hlt R5 0x10
+JMP .instr_err
+
+.instr_nop
+  RET
+
+.instr_sys
+  BRE .sys_exit R2 0x0000
+  BRE .sys_numb R2 0x0400
+  BRE .sys_newl R2 0x0500
+  JMP .instr_err
+
+.instr_imm
+  ADD R2 .vr R2
+  STR R2 R3
+  RET 
+
+.instr_add
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R1 R3 R4
+  ADD R2 .vr R2
+  STR R2 R1
+  RET 
+
+.instr_err
+  IMM R1 .str_invalidinstr
+  CAL .func_pstring
+  STR .var_exit 1
+  STR .var_error 1
+  JMP .instr_hlt
+
+.instr_hlt
+  IMM R1 .str_exit
+  CAL .func_pstring
+  LOD R3 .var_exit
+  OUT %NUMB R3
+  HLT
+
+// Syscalls
+.sys
+.sys_exit
+  IMM R1 .str_exit
+  CAL .func_pstring
+  STR .var_exit R2
+  LOD R2 .var_exit
+  OUT %NUMB R2
+  HLT
+
+.sys_numb
+  BRE .sys_numb_in R3 0x01
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %NUMB R4
+  RET
+  .sys_numb_in
+  JMP .instr_err
+
+.sys_newl
+  OUT %TEXT '\n'
+  RET
+
+// Strings
+.str_init
+DW [ "System > Initializing...\n" 0]
+.str_startup
+DW [ "System > Welcome to fabricOS! \n" 0]
+.str_exit
+DW [ "System > Exited with Status " 0]
+.str_storagefail
+DW [ "System > Failed to load from storage file \n" 0]
+.str_invalidinstr
+DW [ "System > Invalid Instruction\n" 0]
+.str_out
+DW [ " > " 0]
+
+// Functions
+.func_init
+  IMM R1 .str_init
+  CAL .func_pstring
+  STR .vr_stack SP
+  STR M0 0
+  STR .var_error 0
+  STR .var_exit 2
+  STR .var_cwd 0
+  IMM R1 .str_startup
+  CAL .func_pstring
+  RET
+
+.func_pstring //r1 = string address
+  LOD R2 R1
+  BRZ .func_ret R2
+  OUT %TEXT R2
+  INC R1 R1
+  JMP .func_pstring
+
+.func_pstring2
+  STR R7 R6
+  BRZ .func_ret R7
+  OUT %TEXT R7
+  INC R6 R6
+  JMP .func_pstring2
+
+.func_shell
+  BNZ .func_shell_input_end R4
+  IMM r4 0
+  OUT %TEXT '/'
+  IMM R1 .str_out
+  CAL .func_pstring
+  JMP .func_shell_input
+  .func_shell_input_end
+  IMM R4 1
+  .func_shell_input
+  IN R1 %TEXT
+  OUT %TEXT R1
+  PSH R1
+  BNE .func_shell_input R1 0xA
+  JMP .func_exec
+
+.func_exec
+STR .vr 0
+OUT %ADDR R7
+IN R6 %BUS
+BRE .func_shell R6 0xFF00
+AND R2 R6 0xFF00
+AND R3 R6 0x00FF
+INC R7 R7
+OUT %ADDR R7
+IN R6 %BUS
+AND R4 R6 0xFF00
+AND R5 R6 0x00FF
+CAL .instr
+INC R7 R7
+JMP .func_exec
+
+.func_ret
+  RET
