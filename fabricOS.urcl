@@ -19,7 +19,13 @@ DW 0
 // 1 invalid or unimplemented instruction
 .var_cwd
 DW 0
-.var_string
+.var_string1
+DW 0
+.var_string2
+DW 0
+.var_string3
+DW 0
+.var_string4
 DW 0
 
 // Virtual Registers
@@ -130,6 +136,49 @@ JMP .instr_err
   OUT %TEXT '\n'
   RET
 
+.sys_fill
+  BRE .sys_fill_test R3 0x01
+  IN R1 %x
+  IN R2 %y
+  IMM R3 0
+  IMM R5 0
+  OUT %X R3
+  OUT %Y R5
+  .sys_fill_loop
+  OUT %X R3
+  OUT %COLOR R4
+  BRE .sys_fill_row R3 R1
+  INC R3 R3
+  OUT %X R3
+  OUT %Y R5
+  JMP .sys_fill_loop
+  .sys_fill_row
+  IMM R3 0
+  BRE .func_ret R5 R2
+  INC R5 R5
+  JMP .sys_fill_loop
+
+.sys_fill_test
+  IN R1 %x
+  IN R2 %y
+  IMM R3 0
+  IMM R5 0
+  OUT %X R3
+  OUT %Y R5
+  .sys_fill_test_loop
+  OUT %X R3
+  OUT %COLOR R3
+  BRE .sys_fill_test_row R3 R1
+  INC R3 R3
+  OUT %X R3
+  OUT %Y R5
+  JMP .sys_fill_test_loop
+  .sys_fill_test_row
+  IMM R3 0
+  BRE .func_ret R5 R2
+  INC R5 R5
+  JMP .sys_fill_test_loop
+
 // Strings
 .str_init
 DW [ "System > Initializing...\n" 0]
@@ -146,13 +195,14 @@ DW [ " > " 0]
 
 // Functions
 .func_init
+  CAL .sys_fill_test
   IMM R1 .str_init
   CAL .func_pstring
   STR .vr_stack SP
   STR M0 0
   STR .var_error 0
   STR .var_exit 2
-  STR .var_cwd 0
+  STR .var_cwd 1
   IMM R1 .str_startup
   CAL .func_pstring
   RET
@@ -163,13 +213,6 @@ DW [ " > " 0]
   OUT %TEXT R2
   INC R1 R1
   JMP .func_pstring
-
-.func_pstring2
-  STR R7 R6
-  BRZ .func_ret R7
-  OUT %TEXT R7
-  INC R6 R6
-  JMP .func_pstring2
 
 .func_shell
   BNZ .func_shell_input_end R4
@@ -184,20 +227,134 @@ DW [ " > " 0]
   IN R1 %TEXT
   OUT %TEXT R1
   PSH R1
+  INC R3 R3
   BNE .func_shell_input R1 0xA
+  STR .var_string1 0
+  STR .var_string2 0
+  STR .var_string3 0
+  STR .var_string4 0
+  POP R0
+  DEC r3 r3
+  BRE .func_shell_input_3 R3 3
+  BRE .func_shell_input_3 R3 2
+  BRE .func_shell_input_3 R3 1
+  BRE .func_shell R3 0
+  .func_shell_input_4
+  POP R1
+  BRE .func_findfile R1 0x20
+  STR .var_string4 R1
+  .func_shell_input_3
+  POP R1
+  BRE .func_findfile R1 0x20
+  STR .var_string3 R1
+  .func_shell_input_2
+  POP R1
+  BRE .func_findfile R1 0x20
+  STR .var_string2 R1
+  .func_shell_input_1
+  POP R1
+  BRE .func_findfile R1 0x20
+  STR .var_string1 R1
+
+.func_findfile
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_findfile_index R6 0xFFFF
+  INC R7 R7
+  JMP .func_findfile
+  .func_findfile_index
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  CAL .func_findfile_eof_check
+  MOV R8 R6
+  .func_findfile_cwd
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .func_findfile R6 0xFFFE
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  LOD R5 .var_cwd
+  BRE .func_findfile_attempt R6 R5
+  JMP .func_findfile
+
+.func_findfile_attempt
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_findfile_found 0 R3
+  LOD R1 .var_string1
+  AND R5 R6 0xFF00
+  BSR R5 R5 8
+  BNE .func_findfile R5 R1
+  BRE .func_findfile_found 1 R3
+  LOD R1 .var_string2
+  AND R5 R6 0x00FF
+  BNE .func_findfile R5 R1
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_findfile_found 0 R3
+  LOD R1 .var_string3
+  AND R5 R6 0xFF00
+  BSR R5 R5 8
+  BNE .func_findfile R5 R1
+  BRE .func_findfile_found 1 R3
+  LOD R1 .var_string4
+  AND R5 R6 0x00FF
+  BNE .func_findfile R5 R1
+  JMP .func_findfile_found
+
+.func_findfile_found
+  IMM R7 0
+  .func_findfile_found_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R5 R6 0xFF00
+  BRE .func_findfile_found_attempt R5 0xFF00
+  INC R7 R7
+  JMP .func_findfile_found_loop
+  .func_findfile_found_attempt
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_findfile_exec R6 R8
+  JMP .func_findfile_found_loop
+  
+.func_findfile_exec
+  DEC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R6 R6 0x00FF
+  BRE .func_exec R6 0x01
+  JMP .func_shell
+
+.func_findfile_eof_check
+BNE .func_ret 0xFFFF R6
+.func_findfile_eof
+  STR .var_error 4
+  POP R0
+  RET
+
+.func_exec_dec
+  DEC R7 R7
+  DEC R7 R7
   JMP .func_exec
 
 .func_exec
-STR .vr 0
 OUT %ADDR R7
 IN R6 %BUS
 BRE .func_shell R6 0xFF00
 AND R2 R6 0xFF00
+BSR R2 R2 8
 AND R3 R6 0x00FF
 INC R7 R7
 OUT %ADDR R7
 IN R6 %BUS
 AND R4 R6 0xFF00
+BSR R4 R4 8
 AND R5 R6 0x00FF
 CAL .instr
 INC R7 R7
@@ -205,3 +362,4 @@ JMP .func_exec
 
 .func_ret
   RET
+
