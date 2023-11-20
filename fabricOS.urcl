@@ -1,6 +1,7 @@
+// fabricOS v0.3 - Written on URCL v1.5
 // Header
 BITS >= 16
-MINREG 8
+MINREG 10
 MINHEAP 4096
 MINSTACK 16
 
@@ -13,6 +14,7 @@ DW 0
 // 0 planned exit
 // 1 unexpected error
 // 2 unplanned exit
+// 3 No Storage File
 .var_error
 DW 0
 // 0 default
@@ -99,6 +101,26 @@ JMP .instr_err
   STR R2 R1
   RET 
 
+.instr_and
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  AND R1 R3 R4
+  ADD R2 .vr R2
+  STR R2 R1
+  RET 
+
+.instr_nor
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  NOR R1 R3 R4
+  ADD R2 .vr R2
+  STR R2 R1
+  RET 
+
 .instr_err
   IMM R1 .str_invalidinstr
   CAL .func_pstring
@@ -179,6 +201,14 @@ JMP .instr_err
   INC R5 R5
   JMP .sys_fill_test_loop
 
+.sys_grpx
+  BRE .sys_grpx_in R3 1
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %X R4
+  RET
+  .sys_grpx_in
+
 // Strings
 .str_init
 DW [ "System > Initializing...\n" 0]
@@ -187,7 +217,7 @@ DW [ "System > Welcome to fabricOS! \n" 0]
 .str_exit
 DW [ "System > Exited with Status " 0]
 .str_storagefail
-DW [ "System > Failed to load from storage file \n" 0]
+DW [ "System > No Storage File was found. Did you forget to download one?\n" 0]
 .str_invalidinstr
 DW [ "System > Invalid Instruction\n" 0]
 .str_out
@@ -203,6 +233,9 @@ DW [ " > " 0]
   STR .var_error 0
   STR .var_exit 2
   STR .var_cwd 1
+  OUT %SUPPORTED %BUS
+  IN R5 %SUPPORTED
+  BRE .func_storagefail R5 0
   IMM R1 .str_startup
   CAL .func_pstring
   RET
@@ -259,16 +292,18 @@ DW [ " > " 0]
 .func_findfile
   OUT %ADDR R7
   IN R6 %BUS
-  BRE .func_findfile_index R6 0xFFFF
+  AND R5 R6 0xFF00
+  BRE .func_findfile_locate R5 0xFF00
   INC R7 R7
   JMP .func_findfile
-  .func_findfile_index
+
+  .func_findfile_locate
+  BRE .func_findfile_inc R6 0xFFFE
+  AND R5 R6 0x00FF
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
-  CAL .func_findfile_eof_check
-  MOV R8 R6
-  .func_findfile_cwd
+  MOV R4 R6
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
@@ -276,74 +311,85 @@ DW [ " > " 0]
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
-  LOD R5 .var_cwd
-  BRE .func_findfile_attempt R6 R5
+  LOD R8 .var_cwd
+  BRE .func_findfile_checkname R8 R6
+  JMP .func_findfile_locate_continue
+
+  .func_findfile_locate_continue
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .func_findfile R6 0xFFFE
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  LOD R8 .var_cwd
+  BNE .func_findfile_locate_continue R6 R8
+  JMP .func_findfile_checkname
+
+  .func_findfile_inc
+  INC R7 R7
   JMP .func_findfile
 
-.func_findfile_attempt
+.func_findfile_checkname
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
+  BRE .func_findfile R6 0xFFFE
   BRE .func_findfile_found 0 R3
   LOD R1 .var_string1
-  AND R5 R6 0xFF00
-  BSR R5 R5 8
-  BNE .func_findfile R5 R1
+  AND R2 R6 0xFF00
+  BSR R2 R2 8
+  BNE .func_findfile R2 R1
   BRE .func_findfile_found 1 R3
   LOD R1 .var_string2
-  AND R5 R6 0x00FF
-  BNE .func_findfile R5 R1
+  AND R2 R6 0x00FF
+  BNE .func_findfile R2 R1
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
-  BRE .func_findfile_found 0 R3
+  BRE .func_findfile_found 2 R3
   LOD R1 .var_string3
-  AND R5 R6 0xFF00
-  BSR R5 R5 8
-  BNE .func_findfile R5 R1
-  BRE .func_findfile_found 1 R3
+  AND R2 R6 0xFF00
+  BSR R2 R2 8
+  BNE .func_findfile R2 R1
+  BRE .func_findfile_found 3 R3
   LOD R1 .var_string4
-  AND R5 R6 0x00FF
-  BNE .func_findfile R5 R1
+  AND R2 R6 0x00FF
+  BNE .func_findfile R2 R1
   JMP .func_findfile_found
 
 .func_findfile_found
-  IMM R7 0
-  .func_findfile_found_loop
-  OUT %ADDR R7
-  IN R6 %BUS
-  AND R5 R6 0xFF00
-  BRE .func_findfile_found_attempt R5 0xFF00
-  INC R7 R7
-  JMP .func_findfile_found_loop
-  .func_findfile_found_attempt
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
-  BRE .func_findfile_exec R6 R8
-  JMP .func_findfile_found_loop
+  MOV R1 R6
+  BRE .func_findfile_dir R1 0
+  JMP .func_findfile_exec
   
-.func_findfile_exec
-  DEC R7 R7
-  OUT %ADDR R7
-  IN R6 %BUS
-  AND R6 R6 0x00FF
-  BRE .func_exec R6 0x01
+.func_findfile_dir
+  STR .var_cwd R5
+  IMM R4 0
   JMP .func_shell
 
-.func_findfile_eof_check
-BNE .func_ret 0xFFFF R6
-.func_findfile_eof
-  STR .var_error 4
-  POP R0
-  RET
+.func_findfile_exec
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_exec_check R6 0xFFFF
+  INC R7 R7
+  JMP .func_findfile_exec
 
-.func_exec_dec
-  DEC R7 R7
-  DEC R7 R7
+.func_exec_check
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_findfile_exec R6 0xFFFF
+  BNE .func_findfile_exec R6 R1
+  INC R7 R7
   JMP .func_exec
 
 .func_exec
+BRE .func_exec_switch R10 16
 OUT %ADDR R7
 IN R6 %BUS
 BRE .func_shell R6 0xFF00
@@ -358,7 +404,23 @@ BSR R4 R4 8
 AND R5 R6 0x00FF
 CAL .instr
 INC R7 R7
+INC R10 R10
 JMP .func_exec
+
+.func_exec_switch
+  IMM R10 0
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  MOV R1 R6
+  IMM R7 0
+  JMP .func_findfile_exec
+
+.func_storagefail
+  IMM R1 .str_storagefail
+  CAL .func_pstring
+  STR .var_exit 3
+  JMP .instr_hlt
 
 .func_ret
   RET
