@@ -1,4 +1,4 @@
-// fabricOS v0.3 - Written on URCL v1.5
+// fabricOS v0.4 - Written on URCL v1.5
 // Header
 BITS >= 16
 MINREG 10
@@ -19,6 +19,8 @@ DW 0
 DW 0
 // 0 default
 // 1 invalid or unimplemented instruction
+.var_filecount
+DW 0
 .var_cwd
 DW 0
 .var_string1
@@ -28,6 +30,8 @@ DW 0
 .var_string3
 DW 0
 .var_string4
+DW 0
+.var_firstsegment
 DW 0
 
 // Virtual Registers
@@ -67,23 +71,35 @@ DW .instr_err//.instr_pop // 0x0B
 DW .instr_err//.instr_lod // 0x0C
 DW .instr_err//.instr_str// 0x0D
 DW .instr_err//.instr_brc // 0x0E
-DW .instr_err//.instr_blk // 0x0F
+DW .instr_err//.instr_jmp // 0x0F
 DW .instr_hlt // 0x10
 .instr
 BRE .instr_nop R5 0x00
 BRE .instr_sys R5 0x01
 BRE .instr_imm R5 0x02
 BRE .instr_add R5 0x03
+BRE .instr_bre R5 0x09
+BRE .instr_jmp R5 0x0F
 BRE .instr_hlt R5 0x10
+BRE .instr_inc R5 0x11
+BRE .instr_dec R5 0x12
+BRE .instr_bne R5 0x13
 JMP .instr_err
 
 .instr_nop
   RET
 
 .instr_sys
-  BRE .sys_exit R2 0x0000
-  BRE .sys_numb R2 0x0400
-  BRE .sys_newl R2 0x0500
+  BRE .sys_exit R2 0x00
+  BRE .sys_get R2 0x02
+  BRE .sys_char R2 0x03
+  BRE .sys_numb R2 0x04
+  BRE .sys_newl R2 0x05
+  BRE .sys_grpx R2 0x07
+  BRE .sys_grpy R2 0x08
+  BRE .sys_resf R2 0x0C
+  BRE .sys_resn R2 0x0D
+  BRE .sys_end R2 0x10
   JMP .instr_err
 
 .instr_imm
@@ -128,12 +144,84 @@ JMP .instr_err
   STR .var_error 1
   JMP .instr_hlt
 
+.instr_jmp
+  ADD R2 .vr R2
+  LOD R2 R2
+  LOD R6 .var_firstsegment
+  CAL .func_switch
+  .instr_jmp_loop
+  BRL .instr_jmp_end R2 17
+  SUB R2 R2 16
+  ADD R7 R7 33
+  OUT %ADDR R7
+  IN R6 %BUS
+  MOV R1 R6
+  CAL .func_switch
+  JMP .instr_jmp_loop
+  .instr_jmp_end
+  MLT R1 R2 2
+  MOV R10 R2
+  ADD R7 R1 R7
+  DEC R7 R7
+  DEC R7 R7
+  DEC R10 R10
+  DEC R10 R10
+  RET
+
+.instr_psh
+  ADD R2 .vr R2
+  LOD R2 R2
+  PSH R2
+  RET
+
+.instr_pop
+  POP R1
+  ADD R2 .vr R2
+  STR R2 R1
+  RET
+
 .instr_hlt
   IMM R1 .str_exit
   CAL .func_pstring
   LOD R3 .var_exit
   OUT %NUMB R3
   HLT
+
+.instr_inc
+  ADD R3 .vr R3
+  LOD R3 R3
+  INC R3 R3
+  ADD R2 .vr R2
+  STR R2 R3
+  RET 
+
+.instr_dec
+  ADD R3 .vr R3
+  LOD R3 R3
+  DEC R3 R3
+  ADD R2 .vr R2
+  STR R2 R3
+  RET 
+
+.instr_bre
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  BRE .instr_bre_true R4 R3
+  RET
+  .instr_bre_true
+  JMP .instr_jmp
+
+.instr_bne
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  BNE .instr_bne_true R4 R3
+  RET
+  .instr_bne_true
+  JMP .instr_jmp
 
 // Syscalls
 .sys
@@ -144,6 +232,57 @@ JMP .instr_err
   LOD R2 .var_exit
   OUT %NUMB R2
   HLT
+
+.sys_get
+  BRE .sys_get_exit R4 0x01
+  BRE .sys_get_error R4 0x02
+  BRE .sys_get_filecount R4 0x03
+  BRE .sys_get_cwd R4 0x04
+  BRE .sys_get_string1 R4 0x05
+  BRE .sys_get_string2 R4 0x06
+  BRE .sys_get_string3 R4 0x07
+  BRE .sys_get_string4 R4 0x08
+  RET
+  .sys_get_exit
+  LOD R8 .var_exit
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_error
+  LOD R8 .var_error
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_filecount
+  LOD R8 .var_filecount
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_cwd
+  LOD R8 .var_cwd
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_string1
+  LOD R8 .var_string1
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_string2
+  LOD R8 .var_string2
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_string3
+  LOD R8 .var_string3
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
+  .sys_get_string4
+  LOD R8 .var_string4
+  ADD R3 .vr R3
+  STR R3 R8
+  RET
 
 .sys_numb
   BRE .sys_numb_in R3 0x01
@@ -208,12 +347,149 @@ JMP .instr_err
   OUT %X R4
   RET
   .sys_grpx_in
+  IN R1 %X
+  ADD R4 .vr R4
+  STR R4 R1
+  RET
+
+.sys_grpy
+  BRE .sys_grpy_in R3 1
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %Y R4
+  RET
+  .sys_grpy_in
+  IN R1 %Y
+  ADD R4 .vr R4
+  STR R4 R1
+  RET
+
+.sys_resf
+  ADD R4 .vr R4
+  LOD R4 R4
+  MOV R8 R7
+  IMM R7 0
+  .sys_resf_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .sys_resf_error R6 0xFFFF
+  BRE .sys_resf_inc R6 0xFFFE
+  AND R5 R6 0xFF00
+  BRE .sys_resf_found R5 0xFF00
+  INC R7 R7
+  JMP .sys_resf_loop
+  .sys_resf_found
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .sys_resf_loop R4 R6
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .sys_resf_error R6 0xFFFE 
+  .sys_resf_found_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .sys_resf_end R6 0xFFFE  
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  MOV R1 R6
+  INC R7 R7
+  JMP .sys_resf_found_loop
+  .sys_resf_end
+  ADD R3 .vr R3
+  STR R3 R1
+  MOV R7 R8
+  RET
+  .sys_resf_error
+  ADD R3 .vr R3
+  STR R3 0
+  MOV R7 R8
+  RET
+  .sys_resf_inc
+  INC R7 R7
+  JMP .sys_resf_loop
+
+.sys_resn
+  BRE .sys_resn_out R3 0
+  ADD R4 .vr R4
+  LOD R4 R4
+  MOV R8 R7
+  IMM R7 0
+  .sys_resn_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .sys_resn_error R6 0xFFFF
+  BRE .sys_resn_inc R6 0xFFFE
+  AND R5 R6 0xFF00
+  BRE .sys_resn_found R5 0xFF00
+  INC R7 R7
+  JMP .sys_resn_loop
+  .sys_resn_found
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .sys_resn_loop R4 R6
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  .sys_resn_found_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  BNE .sys_resn_end R6 0xFFFE
+  INC R7 R7
+  INC R7 R7
+  JMP .sys_resn_found_loop
+  .sys_resn_end
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R5 R6 0xFF00
+  BSR R5 R5 8
+  STR .var_string1 R5
+  AND R5 R6 0x00FF
+  STR .var_string2 R5
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R5 R6 0xFF00
+  BSR R5 R5 8
+  STR .var_string3 R5
+  AND R5 R6 0x00FF
+  STR .var_string4 R5
+  MOV R7 R8
+  RET
+.sys_resn_inc
+  INC R7 R7
+  JMP .sys_resn_loop
+
+.sys_resn_error
+  STR .var_error 3
+  MOV R7 R8
+  RET
+.sys_resn_out
+  RET
+
+.sys_char
+  BRE .sys_char_in R3 1
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %TEXT R4
+  RET
+.sys_char_in
+  RET
+.sys_end
+  IMM R4 0
+  IMM R7 0
+  // Remove Call Reference
+  PSH R0
+  JMP .func_shell
 
 // Strings
 .str_init
 DW [ "System > Initializing...\n" 0]
 .str_startup
-DW [ "System > Welcome to fabricOS! \n" 0]
+DW [ "System > Welcome to fabricOS 0.4! \n" 0]
 .str_exit
 DW [ "System > Exited with Status " 0]
 .str_storagefail
@@ -236,6 +512,7 @@ DW [ " > " 0]
   OUT %SUPPORTED %BUS
   IN R5 %SUPPORTED
   BRE .func_storagefail R5 0
+  CAL .func_index
   IMM R1 .str_startup
   CAL .func_pstring
   RET
@@ -266,11 +543,12 @@ DW [ " > " 0]
   STR .var_string2 0
   STR .var_string3 0
   STR .var_string4 0
+  IMM R7 0
   POP R0
   DEC r3 r3
   BRE .func_shell_input_3 R3 3
-  BRE .func_shell_input_3 R3 2
-  BRE .func_shell_input_3 R3 1
+  BRE .func_shell_input_2 R3 2
+  BRE .func_shell_input_1 R3 1
   BRE .func_shell R3 0
   .func_shell_input_4
   POP R1
@@ -364,6 +642,7 @@ DW [ " > " 0]
   OUT %ADDR R7
   IN R6 %BUS
   MOV R1 R6
+  STR .var_firstsegment R1
   BRE .func_findfile_dir R1 0
   JMP .func_findfile_exec
   
@@ -389,29 +668,28 @@ DW [ " > " 0]
   JMP .func_exec
 
 .func_exec
-BRE .func_exec_switch R10 16
-OUT %ADDR R7
-IN R6 %BUS
-BRE .func_shell R6 0xFF00
-AND R2 R6 0xFF00
-BSR R2 R2 8
-AND R3 R6 0x00FF
-INC R7 R7
-OUT %ADDR R7
-IN R6 %BUS
-AND R4 R6 0xFF00
-BSR R4 R4 8
-AND R5 R6 0x00FF
-CAL .instr
-INC R7 R7
-INC R10 R10
-JMP .func_exec
-
-.func_exec_switch
-  IMM R10 0
+  BRE .func_exec_switch R10 16
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_shell R6 0xFF00
+  AND R2 R6 0xFF00
+  BSR R2 R2 8
+  AND R3 R6 0x00FF
   INC R7 R7
   OUT %ADDR R7
   IN R6 %BUS
+  AND R4 R6 0xFF00
+  BSR R4 R4 8
+  AND R5 R6 0x00FF
+  CAL .instr
+  INC R7 R7
+  INC R10 R10
+  JMP .func_exec
+
+.func_exec_switch
+  OUT %ADDR R7
+  IN R6 %BUS
+  IMM R10 0
   MOV R1 R6
   IMM R7 0
   JMP .func_findfile_exec
@@ -421,6 +699,47 @@ JMP .func_exec
   CAL .func_pstring
   STR .var_exit 3
   JMP .instr_hlt
+
+.func_index
+  IMM R8 0
+  IMM R7 0
+  IMM R1 0
+  .func_index_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R5 R6 0xFF00
+  BRE .func_index_notafile R6 0xFFFE
+  BRE .func_index_end R6 0xFFFF
+  BRE .func_index_found R5 0xFF00
+  INC R7 R7
+  JMP .func_index_loop
+  .func_index_end
+  STR .var_filecount R1
+  RET
+  .func_index_notafile
+  INC R7 R7
+  JMP .func_index_loop
+  .func_index_found
+  INC R1 R1
+  INC R7 R7
+  JMP .func_index_loop
+
+.func_switch
+  MOV R1 R6
+  IMM R7 0
+  .func_switch_loop
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_switch_check R6 0xFFFF
+  INC R7 R7
+  JMP .func_switch_loop
+  .func_switch_check
+  INC R7 R7
+  OUT %ADDR R7
+  IN R6 %BUS
+  BRE .func_switch_loop R6 0xFFFF
+  BNE .func_switch_loop R6 R1
+  RET
 
 .func_ret
   RET
