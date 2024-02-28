@@ -1,0 +1,791 @@
+// fabricOS v0.5 - Written on URCL v1.5
+// URCX Deploy
+
+// URCL Info
+BITS == 32
+MINREG 11
+MINHEAP 4096
+MINSTACK 16
+
+//Header: Functions that shall be called on startup and program entry point
+CAL .func_deploy
+CAL .func_start
+HLT
+
+// Variables
+.var
+.var_exit
+  DW 0
+.var_error
+  DW 0
+.var_cwd
+  DW 0
+.var_user
+  DW 0
+.var_prcamount
+  DW 1
+.var_fssize
+  DW 0
+.var_firstseg
+  DW 0
+.var_allocated
+  DW 0
+// Process Relevant
+.var_exec
+  DW 0
+.var_perms
+  DW 0
+.rv_name
+DW [ "fabricOS" 0]
+.rv_ver
+DW [ "0.5" 0]
+
+// Virtual Registers
+.vr
+DW 0 //r0 - Always reads 0
+DW 0 //r1
+DW 0 //r2
+DW 0 //r3
+DW 0 //r4
+DW 0 //r5
+DW 0 //r6
+DW 0 //r7
+.vr_stack
+DW 0 //r8
+
+//Instructions
+.instr
+DW .func_ret
+DW .instr_sys
+DW .instr_imm
+DW .instr_add
+
+NOP
+.instr_sys
+  ADD R3 .sys R3
+  LOD R3 R3
+  CAL R3
+  .sys
+  // System Status
+  DW .sys_halt
+  DW .sys_wait
+  DW .sys_runtime
+  Dw .sys_frametime
+  DW .sys_get
+  DW .sys_set
+  DW .sys_tick
+  DW .sys_clock
+  // Processes
+
+NOP
+
+.instr_imm
+  INC R7 R7
+  INC R10 R10
+  INC R11 R11
+  CAL .instr_imm_switch
+  OUT %ADDR R7
+  IN R6 %BUS
+  ADD R3 .vr R3 
+  STR R3 R6
+  RET 
+  .instr_imm_switch
+  BLE .func_ret R10 31
+  CAL .func_switch
+  MOV R7 R1
+  RET
+ 
+.instr_add
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  ADD R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_and
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  AND R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_or
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  OR R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET
+
+.instr_not
+  ADD R4 .vr R4
+  LOD R4 R4
+  NOT R1 R4 
+  ADD R3 .vr R3
+  STR R3 R1
+  RET  
+
+.instr_nor
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  NOR R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_xor
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  XOR R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_mov
+  ADD R3 .vr R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  MOV R1 R4
+  STR R3 R1
+  RET 
+
+.instr_neg
+  ADD R4 .vr R4
+  LOD R4 R4
+  NEG R4 R4
+  ADD R3 .vr R3
+  STR R3 R4
+  RET 
+
+.instr_inc
+  ADD R4 .vr R4
+  LOD R4 R4
+  INC R4 R4
+  ADD R3 .vr R3
+  STR R3 R4
+  RET 
+
+.instr_dec
+  ADD R4 .vr R4
+  LOD R4 R4
+  DEC R4 R4
+  ADD R3 .vr R3
+  STR R3 R4
+  RET 
+
+
+.instr_sub
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SUB R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_setge
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETGE R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_sete
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETE R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_setg
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETG R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_setle
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETLE R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_setl
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETL R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_setne
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  SETNE R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_mlt
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  MLT R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_div
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  DIV R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+.instr_mod
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  MOD R1 R4 R5
+  ADD R3 .vr R3
+  STR R3 R1
+  RET 
+
+// R4 - OP1, R5 - OP2, R6 - Full Word
+.sys_halt
+  LOD R1 .var_perms
+  BRL .sys_error_perms R1 3
+  HLT
+
+.sys_wait
+  LOD R1 .var_perms
+  BRL .sys_error_perms R1 3
+  ADD R4 .vr R4
+  LOD R4 R4
+  IN R0 %WAIT
+  OUT %WAIT R4
+  STR .var_error 0
+  RET
+
+.sys_runtime //URCL 1.6 Feature
+  STR .var_error 0xD 
+  RET
+  
+.sys_frametime //URCL 1.6 Feature
+  STR .var_error 0xD 
+  RET
+
+.sys_get
+  ADD R5 .var R5
+  ADD R4 .vr R4
+  LOD R5 R5
+  STR R4 R5
+  RET
+
+.sys_set
+  LOD R1 .var_perms
+  BRL .sys_error_perms R1 7
+  ADD R5 .var R5
+  ADD R4 .vr R4
+  LOD R4 R4
+  STR R5 R4
+  RET
+
+.sys_tick //URCL 1.6 Feature
+  STR .var_error 0xD 
+  RET
+
+.sys_clock //URCL 1.6 Feature
+  STR .var_error 0xD 
+  RET
+
+//Processes
+
+.sys_execute
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  LOD R1 .var_perms
+  BRL .sys_error_perms R1 R5
+  IMM R1 0
+  .sys_execute_find
+    LLOD R2 R1 M0 
+    AND R2 R2 0xFFFFF000
+    BSR R2 R2 12
+    BRE .sys_execute_success R2 R4
+    BRE .sys_execute_fail R2 0
+    .sys_execute_find_return
+    ADD R1 R1 16
+    JMP .sys_execute_find
+  .sys_execute_fail
+    BRE .sys_execute_find_return R1 0
+    STR .var_error 1
+    RET
+  .sys_execute_success
+  CAL .func_contextswitch
+  RET
+
+.sys_error_perms
+  STR .var_error 0xE
+  RET
+
+.func_deploy
+  IMM R8 .instr
+  IMM R1 .rv_deploy_running
+  CAL .func_pstring
+  IMM R1 .rv_name
+  CAL .func_pstring
+  OUT %TEXT ' '
+  IMM R1 .rv_ver
+  CAL .func_pstring
+  OUT %TEXT '\n'
+
+  IMM R1 .rv_deploy_init
+  CAL .func_pstring
+  OUT %TEXT '\n'
+  OUT %TEXT '\n'
+
+  OUT %SUPPORTED %COLOR
+  IN R1 %SUPPORTED
+  BRE .func_deploy_ugraph R1 0
+  IMM R1 .rv_deploy_graph
+  CAL .func_pstring
+  JMP .func_deploy_graphend
+  .func_deploy_ugraph
+  IMM R1 .rv_deploy_ugraph
+  CAL .func_pstring
+  .func_deploy_graphend
+  OUT %TEXT '\n'
+
+  OUT %SUPPORTED %NLEG
+  IN R1 %SUPPORTED
+  BRE .func_deploy_uaudio R1 0
+  IMM R1 .rv_deploy_audio
+  CAL .func_pstring
+  JMP .func_deploy_audioend
+  .func_deploy_uaudio
+  IMM R1 .rv_deploy_uaudio
+    CAL .func_pstring
+    .func_deploy_audioend
+    OUT %TEXT '\n'
+
+    OUT %SUPPORTED %DATA
+    IN R1 %SUPPORTED
+    BRE .func_deploy_unet R1 0
+    IMM R1 .rv_deploy_net
+    CAL .func_pstring
+    JMP .func_deploy_netend
+    .func_deploy_unet
+    IMM R1 .rv_deploy_unet
+    CAL .func_pstring
+    .func_deploy_netend
+    OUT %TEXT '\n'
+    
+    OUT %SUPPORTED %BUS
+    IN R1 %SUPPORTED
+    BRE .func_deploy_ustore R1 0
+    IMM R1 .rv_deploy_store
+    CAL .func_pstring
+    JMP .func_deploy_storeend
+    .func_deploy_ustore
+    IMM R1 .rv_deploy_ustore
+    CAL .func_pstring
+    OUT %TEXT '\n'
+    IMM R1 .rv_deploy_ustore_2
+    CAL .func_pstring
+    OUT %SUPPORTED %KEY
+    IN R1 %SUPPORTED
+    BRE .func_deploy_urcx R1 0
+        .func_deploy_ustore_wait
+        OUT %KEY R0
+        IN R2 %KEY
+        BRE .func_deploy_wait_check R2 536870912
+        JMP .func_deploy_ustore_wait
+        .func_deploy_wait_check
+        OUT %SUPPORTED %BUS
+        IN R1 %SUPPORTED
+        OUT %TEXT '\n'
+        OUT %WAIT 1000
+        IN R0 %WAIT
+        BRE .func_deploy_ustore R1 0
+        JMP .func_deploy_storeend
+    .func_deploy_storeend
+    OUT %TEXT '\n'
+    JMP .func_deploy_fs
+
+    .func_deploy_fs
+    IMM R1 .rv_deploy_install
+    CAL .func_pstring
+    OUT %TEXT '\n'
+    IMM R1 .rv_deploy_install_2
+    CAL .func_pstring
+    .func_deploy_fs_wait
+    OUT %KEY R0
+    IN R2 %KEY
+    BRE .func_deploy_end R2 536870912
+    BRE .func_deploy_reinstall R2 131072
+    JMP .func_deploy_fs_wait
+
+  .func_deploy_reinstall 
+  OUT %ADDR R1
+  ADD R2 .fs R1
+  LOD R2 R2
+  OUT %BUS R2
+  OUT %TEXT '\n'
+  inc r1 r1
+  brg .func_deploy_end R1 100 //Max Word Value; Placeholder for now
+  JMP .func_deploy_reinstall
+  
+    
+    .func_deploy_end
+    OUT %TEXT '\n'
+    IMM R1 .rv_deploy_ok
+    CAL .func_pstring
+    OUT %TEXT '\n'
+    OUT %WAIT 1000
+    IN R0 %WAIT
+    OUT %TEXT 0x1b
+    OUT %TEXT '['
+    OUT %TEXT '2'
+    OUT %TEXT 'J'
+    RET
+
+    .func_deploy_urcx
+    OUT %TEXT '\n'
+    IMM R1 .rv_deploy_urcx
+    CAL .func_pstring
+    HLT
+    
+    .rv_deploy_audio
+    RW [ "Audio Supported" 0]
+    .rv_deploy_graph
+    RW [ "Graphics Supported" 0]
+    .rv_deploy_init
+    RW [ "Initializing..." 0]
+    .rv_deploy_running
+    RW [ "Running " 0]
+    .rv_deploy_net
+    RW [ "Networking Supported" 0]
+    .rv_deploy_store
+    RW [ "Storage Supported" 0]
+    .rv_deploy_uaudio
+    RW [ "[!] Audio Unsupported" 0]
+    .rv_deploy_ugraph
+    RW [ "[!] Graphics Unsupported" 0]
+    .rv_deploy_unet
+    RW [ "[!] Networking Unsupported" 0]
+    .rv_deploy_ustore
+    RW [ "[!] Storage Missing" 0]
+    .rv_deploy_ustore_2
+    RW [ "Insert supported storage file. Press Y to continue." 0]
+    .rv_deploy_ok
+    RW [ "OK" 0]
+    .rv_deploy_urcx
+    RW [ "Unsupported Version. Please use URCX 1.5.x" 0]
+    .rv_deploy_install_2
+    RW [ "Press N to reinstall fabricOS." 0]
+    .rv_deploy_install
+    RW [ "Press Y to continue execution" 0]
+  .fs
+  RW [0x00000001 0x00000001 0xFABCFABC 0xFABCFABC 0xFABCFABC 0xFABCFABC 0xFABCFABC 0xFABCFABC 0xFABCFABC 0xFABCFABC] //Placeholder
+
+NOP
+
+//Memory Process Entry
+// User + PID + Stack, Allocation or Program (2/1/0) + Perms + Open File (0) 0 AAAA BCD
+// Registers Values (1-8)
+// Line of Execution (9)
+// Index from File (10) 
+// File Descriptors (11-15) Stores first segment not index
+
+// Process Pointer List
+// First Word (FFFFFFFF)
+// User + PID + State (0AAAA B 00) (1-15)
+// State (0 = Inactive; 1 = Active)
+
+// Allocation Entry
+// 0 + PID + 1 + 00
+// Length / Address / Real Address 0 AABBCCCC (1-15)
+
+// Actual Memory Allocations are written to the bottom of memory
+
+// FS Segments
+// $FT FileTable, $Root RootData, $Unalloc Unallocated, $Cnfg Configuration, 
+
+.func_start
+  LSTR M0 0 0x10F0
+  LSTR M0 1 0
+  LSTR M0 2 0
+  LSTR M0 3 0
+  LSTR M0 4 0
+  LSTR M0 5 0
+  LSTR M0 6 0
+  LSTR M0 7 0
+  LSTR M0 8 0
+  LSTR M0 9 0 //LoE is zero-indexed
+  LSTR M0 16 0xFFFFFFFF 
+  LSTR M0 17 0x1100
+  LSTR M0 18 0
+  LSTR M0 19 0
+  LSTR M0 20 0
+  LSTR M0 21 0
+  LSTR M0 22 0
+  LSTR M0 23 0
+  LSTR M0 24 0
+  LSTR M0 25 0
+  LSTR M0 26 0
+  LSTR M0 27 0
+  LSTR M0 28 0
+  LSTR M0 29 0
+  LSTR M0 30 0
+  STR .var_exec 0
+  STR .var_perms 0xF
+  OUT %ADDR 1 //Just always expect that this is the location of the file 
+  IN R6 %BUS
+  MOV R1 R6
+  IN R6 %ADDR
+  STR .var_fssize R6
+  CAL .func_switch
+  MOV R7 R1
+  JMP .func_exec
+
+//Switches to the segment in R1
+.func_switch
+  MLT R1 R1 32
+  BRG .func_switch_page R1 134217728
+  OUT %ADDR R1 // this should be the start of the segment
+  RET
+  .func_switch_page
+    HLT //unimplemented behaviour, I am lazy
+
+.func_exec
+  BRE .func_exec_switch R10 31
+  .func_exec_return
+  OUT %ADDR R7
+  IN R6 %BUS
+  AND R2 R6 0xFF000000 // Instruction
+  BSR R2 R2 24
+  AND R3 R6 0x00FF0000 //OP1
+  BSR R3 R3 16
+  AND R4 R6 0x0000FF00 //OP2
+  BSR R4 R4 8
+  AND R5 R6 0x000000FF //OP3
+  ADD R2 .instr R2
+  LOD R2 R2
+  CAL R2
+  INC R7 R7 //Addr
+  INC R10 R10 //Segment Counter
+  INC R11 R11 //LoE
+  STR .vr 0
+  CAL .func_exec_next
+  JMP .func_exec
+
+.func_exec_switch
+  INC R7 R7
+  OUT %ADDR R7
+  IN R1 %BUS
+  CAL .func_switch
+  MOV R7 R1
+  JMP .func_exec_return
+
+.func_exec_next
+  LOD R1 .var_prcamount
+  BRE .func_ret R1 1
+  LOD R9 .var_exec //Current PID
+  IMM R8 0 // Offset
+  IMM R7 0 // Memory Value
+  IMM R6 0 // Small Offset
+  IMM R1 0 // Process State 
+  IMM R3 0 // Process Counter
+  IMM R2 0 // Total Offset
+  // R5 = Went to start? True/False
+  LOD R4 .var_prcamount //Amount of (Active) Processes
+  .func_exec_next_loop // Find a line that begins with FFFFFFFF; Pointers to PIDs will be found there
+    LLOD R7 R8 M0
+    BRE .func_exec_next_check R7 0xFFFFFFFF
+    ADD R8 R8 16 // Better luck next line
+    JMP .func_exec_next_loop
+    .func_exec_next_check
+    IMM R2 0
+    .func_exec_next_check_loop // In the pointers, find the current process
+    ADD R2 R6 R8
+    LLOD R7 R2 M0
+    AND R1 R7 0x00000F00 // Get the state => Is the program active or suspended?
+    BSR R7 R7 8
+    AND R7 R7 0xFFFFF000 // Get the PID
+    BSR R7 R7 12
+    CAL .func_exec_next_inc // If any found program is active, increment counter
+    BRE .func_exec_next_found R7 R9 // If current Process is found go to found label
+    CAL .func_exec_checkaftergotostart // If: went to start already AND an active program is found => Jackpot
+    BGE .func_exec_next_line R2 15 // Better luck next line
+    INC R2 R2 // Inc small offset
+    JMP .func_exec_next_check_loop 
+  .func_exec_next_found
+  BRE .func_exec_next_gotostart R3 R4 // If current process is the last process in memory, go back to start
+  IMM R2 0
+  .func_exec_next_found_loop 
+    ADD R2 R6 R8
+    LLOD R7 R2 M0
+    AND R1 R7 0x00000F00 // Get the state => Is the program active or suspended?
+    BSR R7 R7 8
+    AND R7 R7 0xFFFFF000 // Get the PID
+    BSR R7 R7 12
+    BRE .func_exec_next_end R1 1 // If active process is found go to end label
+    BGE .func_exec_next_found_line R2 15 // Better luck next line
+    INC R2 R2 // Inc small offset
+    JMP .func_exec_next_found_loop 
+    .func_exec_next_found_line
+    ADD R8 R8 16
+    .func_exec_next_found_line_loop
+    LLOD R7 R8 M0
+    BRE .func_exec_next_found R7 0xFFFFFFFF
+    ADD R8 R8 16 // Better luck next line
+    JMP .func_exec_next_found_line_loop
+  .func_exec_checkaftergotostart
+  BNE .func_ret R5 1
+  BNE .func_ret R1 1
+  JMP .func_exec_next_end
+  .func_exec_next_gotostart
+  IMM R6 0
+  IMM R8 0
+  IMM R3 0
+    .func_exec_next_gotostart_loop
+    LLOD R7 R8 M0
+    BRE .func_exec_next_check R7 0xFFFFFFFF
+    ADD R8 R8 15
+    JMP .func_exec_next_gotostart_loop
+  .func_exec_next_end
+  MOV R1 R7 // Store PID
+  CAL .func_contextswitch
+  RET
+  .func_exec_next_inc
+  BNE .func_ret R7 1
+  BNE .func_ret R4 0
+  INC R3 R3
+  RET
+  .func_exec_next_line
+  ADD R8 16 R8
+  JMP .func_exec_next_loop
+
+.func_contextswitch //Switches to the Program stored in R1
+  IMM R2 0 //Offset
+  IMM R3 0 //Small Offset
+  LOD R7 .var_exec // Old PID
+  .func_contextswitch_old_loop
+    LLOD R5 R2 M0
+    BSR R6 R5 12
+    BRE .func_contextswitch_old_store R6 R7
+    ADD R2 R2 16
+    JMP .func_contextswitch_old_loop
+    .func_contextswitch_old_store
+    ADD R6 R2 1
+    IMM R8 1
+      .func_contextswitch_old_store_loop
+      ADD R9 R8 .vr
+      LOD R9 R9
+      STR R6 R9
+      BRE .func_contextswitch_old_store_loe R8 8
+      INC R6 R6
+      JMP .func_contextswitch_old_store_loop
+      .func_contextswitch_old_store_loe
+      INC R6 R6
+      STR R6 R11
+  STR .var_exec R1
+  IMM R2 0
+  IMM R3 0
+  .func_contextswitch_loop
+  LLOD R5 R2 M0
+  BSR R6 R5 12
+  BRE .func_contextswitch_load R6 R1
+  ADD R2 R2 16
+  JMP .func_contextswitch_loop
+  .func_contextswitch_load
+  LOD R7 R2
+  AND R7 R7 0x00000F00
+  BSR R7 R7 8
+  STR .var_perms R7
+  ADD R6 R2 1
+  IMM R8 1
+    .func_contextswitch_load_loop
+    ADD R9 R8 .vr
+    LOD R9 R9
+    STR R6 R9
+    BRE .func_contextswitch_procsetup R8 8
+    INC R6 R6
+    JMP .func_contextswitch_load_loop
+  .func_contextswitch_procsetup
+  INC R6 R6
+  LOD R11 R6
+  MOV R1 R6
+  CAL .func_goto
+  RET
+
+.func_pstring
+  LOD R2 R1
+  BRZ .func_ret R2
+  OUT %TEXT R2
+  INC R1 R1
+  JMP .func_pstring
+
+.func_switchfile //Set first seg and store in R7
+
+
+.func_goto //Sets R7 to line in R1
+  MOV R2 R1
+  .func_goto_loop
+    BRG .func_goto_switch R2 31
+    JMP .func_goto_move
+    .func_goto_loop_return
+    SUB R2 R2 32
+    JMP .func_goto_loop
+  .func_goto_switch
+    ADD R7 R7 31
+    OUT %ADDR R7
+    IN R6 %BUS
+    MOV R1 R6
+    CAL .func_switch
+    JMP .func_goto_loop_return
+  .func_goto_move
+    ADD R7 R7 R2
+    RET
+
+// Return
+.func_ret
+  RET
+
