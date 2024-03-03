@@ -1,11 +1,20 @@
 // (C) click07, 2024
 // Help - Provides an overview of all terminal commands.
-// What even is the file suffix for Oxided files??
+// @ /prg/help.prg
 
-import std;
-import fabricOS;
+ext fn exit(w word) void;
+ext fn outs(w word) void;
 
 fn main() void {
-    printf(%s, "No help available!");
-    fabricOS.exit(0);
+    let strn word = 1315905640;
+    outs(strn);
+    strn = 1701605408;
+    outs(strn);
+    strn = 1635148137;
+    outs(strn);
+    strn = 1818321516;
+    outs(strn);
+    strn = 65;
+    outs(strn);
+    exit(0);
 }

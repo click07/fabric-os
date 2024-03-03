@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 public class Transpiler
 {
@@ -11,12 +12,12 @@ public static void Main(string[] args)
     string inputIL = File.ReadAllText(path);
     string outputIL = Spread(inputIL);
     outputIL = Adjust(outputIL);
-    Console.WriteLine(outputIL);
+    outputIL = Syscalls(outputIL);
     outputIL = SplitIMM(outputIL);
     outputIL = AddZeros(outputIL);
     outputIL = ConvertLabels(outputIL);
-    //Console.WriteLine(outputIL);
-    // outputIL = Assemble();
+    outputIL = Assemble(outputIL);
+    Console.WriteLine(outputIL);
 
 }
 
@@ -104,7 +105,7 @@ public static string Adjust(string inputIL)
         string adjustedLine = line.Trim();
         if (adjustedLine.StartsWith("HLT"))
         {
-            adjustedLine = "SYS EXIT R0";
+            adjustedLine = "SYS HLT R0";
         }
         else if (adjustedLine.StartsWith("LSTR"))
         {
@@ -124,6 +125,53 @@ public static string Adjust(string inputIL)
 
     return string.Join("\n", outputLines);
 }
+
+public static string Syscalls(string inputIL)
+{
+    string[] lines = inputIL.Split('\n');
+    List<string> outputLines = new List<string>();
+
+    bool[] syscalls = new bool[59];
+
+    foreach (string line in lines)
+    {
+        string outputLine = line.Trim();
+
+        outputLines.Add(outputLine);
+
+        switch(outputLine)
+        {
+	    case "IMM R7 .oxided_exit":
+		syscalls[0] = true;
+		break;
+	    case "IMM R7 .oxided_get":
+		syscalls[4] = true;
+		break;
+	}
+    }
+
+    if(syscalls[0])
+    {
+	outputLines.Add(".oxided_exit");
+	outputLines.Add("POP R3");
+	outputLines.Add("POP R4");
+	outputLines.Add("SYS HLT R4");
+	outputLines.Add("PSH R3");
+	outputLines.Add("RET");
+    }
+    if(syscalls[4])
+    {
+	outputLines.Add(".oxided_get");
+	outputLines.Add("POP R3");
+	outputLines.Add("POP R4");
+	outputLines.Add("SYS GET R1 R4");
+	outputLines.Add("PSH R3");
+	outputLines.Add("RET");
+    }
+
+    return string.Join("\n", outputLines);
+}
+
 
 public static string SplitIMM(string inputIL)
 {
@@ -222,6 +270,149 @@ public static string ConvertLabels(string inputIL)
 
     return string.Join("\n", outputLines);
 }
+
+public static string Assemble(string inputIL)
+{
+    Dictionary<string, string> instructionDictionary = new Dictionary<string, string>()
+    {
+        {"R0", "00"},
+        {"R1", "01"},
+        {"R2", "02"},
+        {"R3", "03"},
+        {"R4", "04"},
+        {"R5", "05"},
+        {"R6", "06"},
+        {"R7", "07"},
+        {"R8", "08"},
+        {"SYS", "01"},
+        {"IMM", "02"},
+        {"ADD", "03"},
+        {"RSH", "04"},
+        {"LOD", "05"},
+        {"STR", "06"},
+        {"PSH", "07"},
+        {"POP", "08"},
+        {"NOR", "09"},
+        {"JMP", "0C"},
+        {"MOV", "0D"},
+        {"CAL", "1C"},
+        {"RET", "1D"},
+        {"XOR", "0F"},
+        {"INC", "10"},
+        {"DEC", "11"},
+        {"SUB", "12"},
+        {"SETGE", "13"},
+        {"MLT", "1E"},
+        {"DIV", "1F"},
+        {"MOD", "20"},
+        {"LSH", "21"},
+        {"SETG", "25"},
+        {"SETE", "24"},
+        {"SETLE", "26"},
+        {"SETL", "27"},
+        {"SETNE", "28"},
+        {"BSR", "04"},
+        {"BSL", "21"},
+        {"HLT", "00"},
+        {"WAIT", "01"},
+        {"FTIME", "02"},
+        {"RTIME", "03"},
+        {"GET", "04"},
+        {"SET", "05"},
+        {"TICK", "06"},
+        {"CLCK", "07"},
+        {"EXEC", "08"},
+        {"SUSP", "09"},
+        {"PSTA", "0A"},
+        {"FORK", "0B"},
+        {"END", "0C"},
+        {"TERM", "0D"},
+        {"WFOR", "0E"},
+        {"RESP", "0F"},
+        {"RLOE", "10"},
+        {"LSTP", "11"},
+        {"MALLOC", "12"},
+        {"FREE", "13"},
+        {"OPEN", "14"},
+        {"SWTC", "15"},
+        {"CLOSE", "16"},
+        {"READ", "17"},
+        {"WRIT", "18"},
+        {"NEWF", "19"},
+        {"NEWD", "1A"},
+        {"GETI", "1B"},
+        {"SETI", "1C"},
+        {"DEL", "1D"},
+        {"RESN", "1E"},
+        {"OUTN", "1F"},
+        {"OUTC", "20"},
+        {"OUTS", "21"},
+        {"SEED", "22"},
+        {"RAND", "23"},
+        {"DRAW", "24"},
+        {"CNVS", "25"},
+        {"CNVST", "26"},
+        {"CLMS", "27"},
+        {"CLMG", "28"},
+        {"FILS", "29"},
+        {"DBOX", "2A"},
+        {"DLINE", "2B"},
+        {"SBUF", "2C"},
+        {"GBUF", "2D"},
+        {"COLR", "2E"},
+        {"SSCR", "2F"},
+        {"GSCR", "30"},
+        {"ACHA", "31"},
+        {"PLAY", "32"},
+        {"KEYB", "33"},
+        {"MPOS", "34"},
+        {"MBUT", "35"},
+        {"CTRL", "36"},
+        {"MDXY", "37"},
+        {"SETM", "38"},
+        {"RECV", "39"},
+        {"SEND", "3A"}
+    };
+
+    string[] lines = inputIL.Split('\n');
+    List<string> outputLines = new List<string>();
+
+    foreach (string line in lines)
+    {
+        string outputLine = line.Trim();
+        if (outputLine.StartsWith("."))
+        {
+            outputLine = "00000000";
+        }
+        else if (int.TryParse(outputLine, out int lineNumber))
+        {
+            outputLine = lineNumber.ToString("X8");
+        }
+        else
+        {
+            string[] tokens = outputLine.Split(' ');
+            StringBuilder hexLine = new StringBuilder();
+            foreach (string token in tokens)
+            {
+                if (instructionDictionary.TryGetValue(token, out string hexValue))
+                {
+                    hexLine.Append(hexValue);
+                }
+                else
+                {
+                    hexLine.Append("00");
+                }
+            }
+            outputLine = hexLine.ToString();
+        }
+
+        outputLine = outputLine.Replace(" ", "");
+        outputLines.Add(outputLine);
+    }
+
+    return string.Join("\n", outputLines);
+}
+
 
 
 }

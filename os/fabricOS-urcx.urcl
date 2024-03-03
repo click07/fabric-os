@@ -334,6 +334,21 @@ NOP
   STR .var_error 0xD 
   RET
 
+.sys_canvas
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  OUT %X R4
+  OUT %Y R5
+  RET 
+
+.sys_draw
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %COLOR R4
+  RET
+
 //Processes
 
 .sys_execute

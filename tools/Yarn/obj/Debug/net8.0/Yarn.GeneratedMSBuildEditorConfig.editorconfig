@@ -8,6 +8,6 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = Yarn
-build_property.ProjectDir = C:\Users\Guest User\Yarn\
+build_property.ProjectDir = C:\Users\Guest User\fabricOS\tools\Yarn\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 

@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Guest User\\Yarn\\Yarn.csproj": {}
+    "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\Yarn.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Guest User\\Yarn\\Yarn.csproj": {
+    "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\Yarn.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Guest User\\Yarn\\Yarn.csproj",
+        "projectUniqueName": "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\Yarn.csproj",
         "projectName": "Yarn",
-        "projectPath": "C:\\Users\\Guest User\\Yarn\\Yarn.csproj",
-        "packagesPath": "C:\\Users\\plane\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Guest User\\Yarn\\obj\\",
+        "projectPath": "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\Yarn.csproj",
+        "packagesPath": "C:\\Users\\Guest User\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\plane\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Guest User\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"

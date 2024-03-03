@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UnmFhzqET3PVym2b8OPOr17b+FXulFYgINw69SSEX6ECr+6qS3x4soNIkWFw3Ks191EdKaq/FKEyV4C0lzVN7g==",
+  "dgSpecHash": "+WXhdkpCqpcfDiVRQ23nGH7pFot4VaPrUyff/S0mv2J/SeYHZ3fbi68psY98KFLPb7vYumqTqVD1yGVWf73ivA==",
   "success": true,
-  "projectFilePath": "C:\\Users\\Guest User\\Yarn\\Yarn.csproj",
+  "projectFilePath": "C:\\Users\\Guest User\\fabricOS\\tools\\Yarn\\Yarn.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }
