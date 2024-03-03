@@ -2,7 +2,7 @@
 // Help - Provides an overview of all terminal commands.
 // @ /prg/help.prg
 
-ext fn exit(w word) void;
+ext fn end(w word) void;
 ext fn outs(w word) void;
 
 fn main() void {
@@ -16,5 +16,5 @@ fn main() void {
     outs(strn);
     strn = 65;
     outs(strn);
-    exit(0);
+    end(0);
 }

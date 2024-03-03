@@ -105,7 +105,7 @@ public static string Adjust(string inputIL)
         string adjustedLine = line.Trim();
         if (adjustedLine.StartsWith("HLT"))
         {
-            adjustedLine = "SYS HLT R0";
+            adjustedLine = "SYS END R0";
         }
         else if (adjustedLine.StartsWith("LSTR"))
         {
@@ -141,7 +141,7 @@ public static string Syscalls(string inputIL)
 
         switch(outputLine)
         {
-	    case "IMM R7 .oxided_exit":
+	    case "IMM R7 .oxided_end":
 		syscalls[0] = true;
 		break;
 	    case "IMM R7 .oxided_get":
@@ -152,10 +152,10 @@ public static string Syscalls(string inputIL)
 
     if(syscalls[0])
     {
-	outputLines.Add(".oxided_exit");
+	outputLines.Add(".oxided_end");
 	outputLines.Add("POP R3");
 	outputLines.Add("POP R4");
-	outputLines.Add("SYS HLT R4");
+	outputLines.Add("SYS END R4");
 	outputLines.Add("PSH R3");
 	outputLines.Add("RET");
     }
