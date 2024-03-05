@@ -1,0 +1,77 @@
+// fabricator
+
+// A File Uploader for the fabricOS File System
+// Usage:
+// Step 1: Upload the file you wish to merge to the fs.
+// Step 2: Enter 'S' into the console to save to memory.
+// Step 3: Upload the fabricOS storage file, make sure to increase the 
+//         minimum storage size to make space for the file addition
+// Step 4: Enter 'M' to merge
+// Step 4: Enter a Segment Number to Merge to. You can get a file's segment
+//         number in fabricOS with /prg/fileinfo.prg (not yet tho)
+// Step 5: Update and Download the Storage File.
+
+// WARNING!!!! FABRICATOR DOES NOT SUPPORT WRITING TO DIFFERENT SEGMENTS YET!
+// ANY SEGMENTS AFTER YOUR MERGE SEGMENT MAY BE OVERWRITTEN!
+
+bits 32
+minheap 0xffff
+
+.loop
+IN R1 %TEXT
+OUT %TEXT R1
+OUT %TEXT '\n'
+BRE .upload R1 'S'
+BRE .save R1 'M'
+JMP .loop
+
+.upload
+IMM R4 3
+IN R2 %ADDR
+    .uploadLoop
+    OUT %ADDR R3
+    IN R4 %BUS
+    LSTR M0 R3 R4
+    INC R3 R3
+    BRL .uploadLoop R3 R2
+OUT %TEXT 'D'
+OUT %TEXT 'O'
+OUT %TEXT 'N'
+OUT %TEXT 'E'
+
+JMP .loop
+
+.save
+IN R1 %NUMB
+OUT %NUMB R1 //Segment
+MOV R5 R1 //Segment Counter
+CAL .switch //Convert Segment to Line
+    .saveloop
+    BRG .end R7 R2
+    LLOD R8 M0 R7
+    OUT %ADDR R1
+    OUT %BUS R8 // Memory Value
+    INC R1 R1 //Line Count
+    INC R6 R6 //Loop Counter
+    INC R7 R7 //Memory Offset
+    BRL .saveloop R6 32
+    IMM R6 0
+    INC R5 R5
+    INC R1 R1
+    OUT %BUS R5
+    JMP .saveloop
+.end
+JMP .loop
+
+.switch
+  MLT R1 R1 32
+  BRG .meWhen R1 134217728
+  RET
+
+.meWhen
+OUT %TEXT '\n'
+OUT %TEXT '2'
+OUT %TEXT 0x20
+OUT %TEXT 'B'
+OUT %TEXT 'I'
+OUT %TEXT 'G'

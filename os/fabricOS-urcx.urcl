@@ -349,6 +349,12 @@ NOP
   OUT %COLOR R4
   RET
 
+.sys_audiochannel
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %INSTR R4
+  RET
+
 //Processes
 
 .sys_execute
