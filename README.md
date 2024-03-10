@@ -19,6 +19,7 @@ Full Storage Files
 - ./tools
 Development and other useful external tools.
   - Yarn (Oxided Output to FabricIL)
+  - Fabricator (Upload and Merge Files into a FabricOS Storage File)
 - ./prg
 Internal Program Source Files.
 ### Branches ###

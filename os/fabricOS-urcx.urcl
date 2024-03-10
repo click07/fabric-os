@@ -18,27 +18,31 @@ HLT
   DW 0
 .var_error
   DW 0
-.var_cwd
+.var_cwd //Purely symbolic variable. CWD is not used in any syscalls.
   DW 0
 .var_user
   DW 0
+.var_terminalactive //Weather to read from the terminal every now and then or not.
+  DW 0
+// Variables beyond this point should not be modified
 .var_prcamount
   DW 1
 .var_fssize
   DW 0
-.var_firstseg
+.var_firstseg //Segment which the current file to execute from starts in
   DW 0
-.var_allocated
+.var_allocated //Amount of Allocated Memory Blocks
   DW 0
 // Process Relevant
 .var_exec
   DW 0
 .var_perms
   DW 0
+
 .rv_name
 DW [ "fabricOS" 0]
 .rv_ver
-DW [ "0.5" 0]
+DW [ "1.0-DEV 06-03-24" 0]
 
 // Virtual Registers
 .vr
@@ -286,6 +290,106 @@ NOP
   STR R3 R1
   RET 
 
+.instr_jmp
+  ADD R3 .vr R3
+  LOD R3 R3
+  MOV R1 R3
+  CAL .func_goto
+  DEC R7 R7
+  RET
+
+.instr_bge
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRL .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_brg
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BLE .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_bre
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BNE .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_bne
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRE .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_ble
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRG .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_brl
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BGE .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_brc
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BNC .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_bnc
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRC .func_ret R4 R5
+  JMP .instr_jmp
+
+.instr_rsh
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRZ .instr_rsh_once R5
+  BSR R3 R4 R5
+  RET
+  .instr_rsh_once
+  RSH R3 R4
+  RET
+
+.instr_lsh
+  ADD R3 .vr R3
+  LOD R3 R3
+  ADD R4 .vr R4
+  LOD R4 R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  BRZ .instr_rsh_once R5
+  BSL R3 R4 R5
+  RET
+  .instr_lsh_once
+  LSH R3 R4
+  RET
+
 // R4 - OP1, R5 - OP2, R6 - Full Word
 .sys_halt
   LOD R1 .var_perms
@@ -355,7 +459,56 @@ NOP
   OUT %INSTR R4
   RET
 
-//Processes
+.sys_play
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %NOTE R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  OUT %NLEG R5 
+  RET
+
+.sys_send
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %ADDR R4
+  ADD R5 .vr R5
+  LOD R5 R5
+  OUT %DATA R5 
+  RET
+
+.sys_receive
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %ADDR R4
+  ADD R5 .vr R5
+  IN R1 %DATA
+  STR R5 R1
+  RET
+
+.sys_seed
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %RAND R4
+  RET
+
+.sys_rand
+  ADD R4 .vr R4
+  IN R1 %RAND
+  STR R1 R4
+  RET
+
+.sys_outnumb
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %NUMB R4
+  RET
+
+ .sys_outchar
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %TEXT R4
+  RET
 
 .sys_execute
   ADD R4 .vr R4
@@ -385,6 +538,61 @@ NOP
 .sys_error_perms
   STR .var_error 0xE
   RET
+
+.sys_fill
+  IN R1 %x
+  IN R2 %y
+  IMM R3 0
+  IMM R5 0
+  OUT %X R3
+  OUT %Y R5
+  ADD R4 .vr R4
+  LOD R4 R4
+  .sys_fill_loop
+  OUT %X R3
+  OUT %COLOR R4
+  BRE .sys_fill_row R3 R1
+  INC R3 R3
+  OUT %X R3
+  OUT %Y R5
+  JMP .sys_fill_loop
+  .sys_fill_row
+  IMM R3 0
+  BRE .func_ret R5 R2
+  INC R5 R5
+  JMP .sys_fill_loop
+
+.sys_setbuffer
+  ADD R4 .vr R4
+  LOD R4 R4
+  OUT %BUFFER R4
+  RET
+
+.sys_getbuffer
+  ADD R4 .vr R4
+  IN R1 %BUFFER
+  STR R1 R4
+  RET
+
+.sys_keyboard
+  ADD R4 .vr R4
+  IN R1 %KEY
+  STR R1 R4
+  RET
+
+.sys_controller
+  ADD R4 .vr R4
+  IN R1 %GAMEPAD
+  STR R1 R4
+  RET
+
+.sys_mousebuttons
+  ADD R4 .vr R4
+  IN R1 %MOUSE_BUTTONS
+  STR R1 R4
+  RET
+
+//Functions
 
 .func_deploy
   IMM R8 .instr
@@ -785,7 +993,7 @@ NOP
   JMP .func_pstring
 
 .func_switchfile //Set first seg and store in R7
-
+RET
 
 .func_goto //Sets R7 to line in R1
   MOV R2 R1
