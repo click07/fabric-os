@@ -390,6 +390,83 @@ NOP
   LSH R3 R4
   RET
 
+.instr_psh
+  ADD R3 .vr R3
+  LOD R3 R3
+  IMM R1 0
+  .instr_psh_find
+  CAL .instr_psh_check
+  ADD R1 16 R1
+  JMP .instr_psh_find
+  .instr_psh_check
+  LLOD R2 R1 M0
+  AND R4 R2 0x0FFFF000
+  BSR R4 R4 12
+  LOD R5 .var_exec
+  BNE .func_ret R4 R5
+  AND R4 R2 0x00000F00
+  BSR R4 R4 8
+  BNE .func_ret R4 2
+  AND R4 R2 0x0000000F
+  BRE .instr_psh_str_fail R4 0xF // Stack Overflow
+  INC R2 R2
+  LSTR R1 M0 R2
+  JMP .instr_psh_str
+  .instr_psh_str
+  ADD R1 R1 R2
+  INC R1 R1
+  LSTR R1 M0 R3
+  RET
+  .instr_psh_str_fail
+  STR .var_error 1
+  RET
+
+.instr_pop
+  ADD R3 .vr R3
+  IMM R1 0
+  .instr_pop_find
+  CAL .instr_pop_check
+  ADD R1 16 R1
+  JMP .instr_pop_find
+  .instr_pop_check
+  LLOD R2 R1 M0
+  AND R4 R2 0x0FFFF000
+  BSR R4 R4 12
+  LOD R5 .var_exec
+  BNE .func_ret R4 R5
+  AND R4 R2 0x00000F00
+  BSR R4 R4 8
+  BNE .func_ret R4 2
+  AND R4 R2 0x0000000F
+  BRZ .instr_pop_lod_fail R4 // Stack Underflow
+  DEC R2 R2
+  LSTR R1 M0 R2
+  JMP .instr_pop_lod
+  .instr_pop_lod
+  ADD R1 R1 R2
+  LLOD R1 R1 M0
+  STR R3 R1
+  RET
+  .instr_pop_lod_fail
+  STR .var_error 1
+  RET
+
+.instr_cal
+  MOV R6 R3
+  MOV R3 R11
+  CAL .instr_psh_find
+  MOV R3 R6
+  CAL .instr_jmp
+  RET
+
+.instr_ret
+  IMM R3 .vr
+  CAL .instr_pop_find
+  ADD R3 .vr 0
+  LOD R3 R3
+  CAL .instr_jmp
+  RET
+
 // R4 - OP1, R5 - OP2, R6 - Full Word
 .sys_halt
   LOD R1 .var_perms
@@ -995,7 +1072,7 @@ NOP
 .func_switchfile //Set first seg and store in R7
 RET
 
-.func_goto //Sets R7 to line in R1
+.func_goto //TODO! THIS DOES NOT STORE R11 YET!!!
   MOV R2 R1
   .func_goto_loop
     BRG .func_goto_switch R2 31
