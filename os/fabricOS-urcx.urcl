@@ -26,7 +26,9 @@ HLT
   DW 0
 // Variables beyond this point should not be modified
 .var_prcamount
-  DW 1
+  DW 0
+.var_totalprc
+  DW 0
 .var_fssize
   DW 0
 .var_firstseg //Segment which the current file to execute from starts in
@@ -669,6 +671,30 @@ NOP
   STR R1 R4
   RET
 
+.sys_fork
+  // Usable Registers: R1 = Offset, R2 = Value from Memory, R3 = PID, R6 = Temp, R8, R9
+  ADD R4 .vr R4
+  LOD R4 R4
+  // Search until file with ID is found
+     // If fail => Return Error Code
+  // If success, push first segment
+  // If totalprc % 15 is 0 => Create new pointer section
+  // Go to pointers, find an empty spot
+    // If none is found find the next pointer section
+  // Push memory offset for empty spot
+  // PID Attempt: Totalprc + 1
+    // Iterate through all pointers until totalprc is reached
+    // If PID is matched => break and increment attempt
+    // If none is matched go back to memory offset and write down PID to 0x0FFFF000
+    // Add 0x11 to this entry for line counts
+  // Create Process Section with PID, Add 11 to Offset and pop first segment from stack, then write to mem
+  // Create Stack with PID
+  // Create FDs with PID
+  // Create Allocs with PID
+  ADD R5 .vr R5
+  STR R5 R3
+  RET
+
 //Functions
 
 .func_deploy
@@ -1090,6 +1116,14 @@ RET
   .func_goto_move
     ADD R7 R7 R2
     RET
+
+  .func_getempty
+    IMM R1 0
+    .func_getempty_loop
+    LLOD R2 R1 M0
+    BRZ .func_ret R2
+    ADD R1 R1 16
+    JMP .func_getempty_loop
 
 // Return
 .func_ret
